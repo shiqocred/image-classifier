@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+
+<h1>Image Classifier</h1>
+<div id="console"></div>
+<video autoplay
+muted
+playsinline
+id="webcam"
+width="400"
+height="400"
+></video>
+
+<button id="dog">Add Dog</button>
+<button id="cat">Add Cat</button>
+<button id="snake">Add Snake</button>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/knn-classifier"></script>
+
+<script>
+    const classifier = knnClassifier.create()
+    const webcamEl = document.getElementById('webcam')
+
+    let net
+
+    async function app() {
+        console.log("Loading mobilenet...")
+
+        net = await mobilenet.load()
+
+        console.log("Loaded model")
+
+        const webcam = await tf.data.webcam(webcamEl)
+
+        const addExample = async (classId) => {
+
+            const img = await webcam.capture()
+
+            const activation = net.infer(img, true)
+
+
+            classifier.addExample(activation, classId )
+
+            img.dispose()
+        }
+
+        document.getElementById('dog').addEventListener('click', () =>
+            addExample(0)
+        )
+        document.getElementById('cat').addEventListener('click', () =>
+            addExample(1)
+        )
+        document.getElementById('snake').addEventListener('click', () =>
+            addExample(2)
+        )
+
+        while (true) {
+            if(classifier.getNumClasses() > 0) {
+
+                const img = await webcam.capture()
+
+                const activation = net.infer(img, "conv_preds")
+
+                const result = await classifier.predictClass(activation)
+
+                const classes = ["Dog", "Cat", "Snake"]
+
+                document.getElementById('console').innerText = `
+                    predicton: ${classes[result.label]}\n
+                    probability: ${result.confidences[result.label]}
+                `
+
+                img.dispose()
+            }
+
+            await tf.nextFrame()
+        }
+    }
+
+    app()
+</script>
+</body>
+</html>
